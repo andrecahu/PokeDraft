@@ -161,6 +161,25 @@ body::after{
 .tog.on{background:var(--green);}
 .tog.on::after{transform:translateX(22px);}
 .tog-lbl{font-size:14px;font-weight:700;color:var(--tx);}
+/* Opções do setup: cada linha vira um cartão clicável, com respiro entre elas */
+.opt-group{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.opt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));}
+.opt-row{
+  display:flex;align-items:center;gap:13px;padding:11px 14px;border-radius:12px;
+  background:var(--surf);border:1.5px solid var(--brd);cursor:pointer;transition:all .15s;
+}
+.opt-row:hover{border-color:var(--brd2);background:var(--surf2);}
+.opt-row .tog{flex-shrink:0;}
+.opt-txt{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.opt-txt b{font-size:13.5px;font-weight:800;color:var(--tx);line-height:1.25;}
+.opt-txt small{font-size:11px;font-weight:600;color:var(--tx3);line-height:1.35;}
+.btn-analisar{
+  width:100%;margin-top:10px;padding:8px;border-radius:9px;
+  border:1.5px solid rgba(168,85,247,.45);background:rgba(168,85,247,.12);
+  color:#d8b4fe;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;transition:all .15s;
+}
+.btn-analisar:hover:not(:disabled){background:#a855f7;color:#fff;border-color:#a855f7;}
+.btn-analisar:disabled{opacity:.6;cursor:default;}
 
 /* ── QTY BUTTONS ── */
 .qty-row{display:flex;flex-wrap:wrap;gap:8px;}
@@ -644,12 +663,81 @@ body::after{
 .tag-chip::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--tx3);opacity:.45;transition:all .15s;}
 .tag-chip.on{border-color:var(--yellow);color:var(--tx);background:var(--surf2);}
 .tag-chip.on::before{background:var(--yellow);opacity:1;box-shadow:0 0 6px var(--yellow);}
+/* Numa sala a tag é regra da partida: mostra o estado, mas não deixa mexer. */
+.tag-chip.travado{cursor:not-allowed;opacity:.75;}
+.tag-chip.travado:hover{background:var(--surf);color:var(--tx3);}
+.tag-chip.travado.on:hover{background:var(--surf2);color:var(--tx);}
+.tag-chip.travado::after{content:'🔒';font-size:8px;margin-left:1px;opacity:.7;}
 #ban-poke-panel{flex:1;min-height:0;display:flex;flex-direction:column;}
 
+/* Pokémon já escolhido/banido: clicável só pra consultar a ficha */
+.vervel{cursor:pointer;transition:transform .12s,border-color .12s;}
+.vervel:hover{transform:translateY(-2px);border-color:var(--yellow);}
+
+/* ── AVISOS (toast) E CONFIRMAÇÃO ── */
+.toast-wrap{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  z-index:3000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:center;gap:9px;padding:11px 16px;border-radius:12px;
+  background:var(--bg2);border:1.5px solid var(--brd2);box-shadow:0 12px 34px rgba(0,0,0,.55);
+  font-size:13px;font-weight:800;color:var(--tx);max-width:min(440px,92vw);
+  animation:toastIn .22s cubic-bezier(.2,.9,.3,1.3);
+}
+.toast.saindo{animation:toastOut .2s ease forwards;}
+.toast.ok{border-color:rgba(34,197,94,.5);}
+.toast.ok .toast-ico{color:#4ade80;}
+.toast.err{border-color:rgba(220,38,38,.5);}
+.toast.err .toast-ico{color:#f87171;}
+.toast-ico{font-size:15px;flex-shrink:0;}
+.toast small{display:block;font-size:11px;font-weight:600;color:var(--tx3);margin-top:2px;
+  word-break:break-all;font-family:ui-monospace,monospace;}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
+@keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.97);}}
+
+.cf-ov{
+  position:fixed;inset:0;z-index:3100;background:rgba(4,7,18,.78);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.cf-ov.open{display:flex;animation:toastIn .18s ease;}
+.cf-box{
+  background:var(--bg2);border:1.5px solid var(--brd2);border-radius:16px;padding:22px;
+  width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.65);
+}
+.cf-tit{font-size:17px;font-weight:900;color:var(--tx);margin-bottom:7px;}
+.cf-txt{font-size:13px;font-weight:600;color:var(--tx2);line-height:1.55;margin-bottom:18px;}
+.cf-acoes{display:flex;gap:9px;}
+.cf-acoes button{
+  flex:1;padding:11px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;
+  border:1.5px solid var(--brd2);background:var(--surf);color:var(--tx2);transition:all .15s;
+}
+.cf-acoes button:hover{background:var(--surf2);color:var(--tx);}
+.cf-acoes .cf-ok{background:var(--yellow);border-color:var(--yellow);color:#151515;}
+.cf-acoes .cf-ok:hover{filter:brightness(1.08);}
+.cf-acoes .cf-ok.perigo{background:#dc2626;border-color:#dc2626;color:#fff;}
+
 /* ── SALA ONLINE ── */
-.aguardando{opacity:.55;}
-.aguardando .type-ban-grid,.aguardando .poke-pick-grid,.aguardando .ar-cards,
-.aguardando #ban-poke-panel,.aguardando .filter-row-compact{pointer-events:none;}
+/* Fora da sua vez: continua navegável (dá pra estudar a pool), só não deixa
+   confirmar. O que muda é o brilho, não o acesso. */
+.aguardando .turn-banner,.aguardando .poke-pick-grid,.aguardando .ar-cards,
+.aguardando #ban-poke-panel,.aguardando .type-ban-grid{opacity:.6;}
+.aguardando .poke-pick-card:hover,.aguardando .ar-card:hover{border-color:var(--brd2);transform:none;}
+.side-team-player{font-size:10px;font-weight:800;color:var(--tx3);margin:2px 0 4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Abas Online / Nesta tela no topo do setup */
+.modo-tabs{display:flex;gap:6px;background:var(--bg2);padding:4px;border-radius:12px;margin-bottom:10px;}
+.modo-tabs button{
+  flex:1;padding:9px 10px;border:none;border-radius:9px;background:transparent;
+  color:var(--tx3);font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;transition:all .15s;
+}
+.modo-tabs button:hover{color:var(--tx2);}
+.modo-tabs button.on{background:var(--surf2);color:var(--tx);box-shadow:0 2px 8px rgba(0,0,0,.35);}
+#modo-online.on{color:#c4b5fd;}
+
+.modal-so-consulta{
+  flex:1;text-align:center;font-size:12px;font-weight:800;color:var(--tx3);padding:8px;
+}
 .sala-bar{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;
   background:var(--surf);border:1.5px solid var(--brd2);border-radius:12px;
@@ -695,6 +783,7 @@ body::after{
   font-size:20px;font-weight:900;letter-spacing:.2em;text-align:center;text-transform:uppercase;
 }
 .lb-input:focus{outline:none;border-color:var(--yellow);}
+.lb-input.nome{font-family:inherit;font-size:17px;letter-spacing:normal;text-transform:none;text-align:left;padding:0 14px;}
 .lb-msg{font-size:11.5px;font-weight:700;padding:8px 11px;border-radius:8px;margin-top:10px;line-height:1.5;}
 .lb-msg.err{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);color:#fca5a5;}
 .lb-msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#86efac;}
@@ -1232,7 +1321,6 @@ body::after{
   <div class="draft-wrap draft-wrap-narrow">
     <div class="rh">
       <span class="rh-title">🏆 Draft — Setup</span>
-      <button class="btn-back" onclick="nav('scr-filter');setNavAct(document.querySelectorAll('.tnav-btn')[1])">← Filtros</button>
     </div>
     <div id="draft-setup-body"></div>
   </div>
@@ -1279,7 +1367,8 @@ body::after{
         <button id="fmt-2v2" onclick="setCompFormat('2v2')">2x2 Duplas</button>
       </div>
       <span class="comp-sub" id="comp-count">0/6 Pokémon</span>
-      <button class="btn-back" style="margin-left:auto" id="comp-export" onclick="exportComp()">📋 Exportar</button>
+      <button class="btn-back" id="comp-voltar-draft" style="margin-left:auto;display:none;border-color:#a855f7;color:#d8b4fe" onclick="voltarAoDraft()">← Voltar ao draft</button>
+      <button class="btn-back" id="comp-export" onclick="exportComp()">📋 Exportar</button>
       <button class="btn-back" onclick="openImport()">📥 Importar</button>
       <button class="btn-back" onclick="clearComp()">🗑 Limpar time</button>
     </div>
@@ -1369,6 +1458,19 @@ body::after{
 
 <!-- DRAFT HOVER STAT TOOLTIP -->
 <div id="draft-tip" class="draft-tip"></div>
+
+<!-- AVISOS E CONFIRMAÇÃO (substituem alert/confirm do navegador) -->
+<div id="toasts" class="toast-wrap"></div>
+<div id="cf-ov" class="cf-ov">
+  <div class="cf-box">
+    <p class="cf-tit" id="cf-tit"></p>
+    <p class="cf-txt" id="cf-txt"></p>
+    <div class="cf-acoes">
+      <button id="cf-nao">Cancelar</button>
+      <button id="cf-sim" class="cf-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <!-- COMP INFO TOOLTIP (golpes / itens) -->
 <div id="info-tip" class="info-tip"></div>
@@ -1464,6 +1566,14 @@ const DRAFT_TAGS = [
   {key: 'paradox', label: 'Paradox',     set: PARADOX},
   {key: 'ub',      label: 'Ultra Beast', set: ULTRA_BEASTS},
 ];
+// Explicação curta de cada categoria, pra tela de setup.
+const TAG_DESC = {
+  leg:     'Lendários e míticos · 94',
+  pseudo:  'Garchomp, Dragapult e cia · 10',
+  paradox: 'Passado e futuro · 22',
+  ub:      'Nihilego, Kartana e cia · 11',
+};
+
 function pokeTags(id) { return DRAFT_TAGS.filter(t => t.set.has(id)).map(t => t.key); }
 function passesTagFilter(id) { return DRAFT_TAGS.every(t => !t.set.has(id) || draftShowTag[t.key]); }
 const TC = {normal:'#9fa19f',fire:'#e62829',water:'#2980ef',electric:'#f8c300',grass:'#3fa129',ice:'#3dcef3',fighting:'#ff8000',poison:'#9141cb',ground:'#915121',flying:'#81b9ef',psychic:'#ef4179',bug:'#91a119',rock:'#afa981',ghost:'#704170',dragon:'#5060e1',dark:'#624d4e',steel:'#60a1b8',fairy:'#ef70ef'};
@@ -1598,6 +1708,8 @@ let starterGenRandomOn = false; // draft setup: randomize each team's starter ge
 let draftShowTag = {leg: false, pseudo: false, paradox: false, ub: false};
 let draftArenaOn = false;  // picks estilo arena: 3 opções sorteadas por turno
 let draftUseBans = true;   // se a fase de bans acontece
+let draftExigirInicial = true; // se o 1º pick de cada time tem que ser um inicial
+let modoDraft = 'online';      // visão da tela de setup: 'online' | 'local'
 const CACHE = {}, MV_STORE = {};
 let draft = null;
 
@@ -1633,8 +1745,6 @@ let draft = null;
   });
   preloadVariants();
   openDraftSetup();
-  // Link do tipo .../#ABC12 já cai direto na sala.
-  autoEntrarPeloLink();
 })();
 
 // ═══ FILTER TOGGLES ═══
@@ -1672,8 +1782,35 @@ function toggleUseBans() {
   draftUseBans = !draftUseBans;
   document.getElementById('d-bans-tog').classList.toggle('on', draftUseBans);
 }
+// Alterna a tela de setup entre jogar online (padrão) e tudo numa tela só.
+// No online os nomes vêm de quem entra na sala, então os campos somem.
+function setModoDraft(m) {
+  modoDraft = m;
+  const online = m === 'online';
+  const g = id => document.getElementById(id);
+  g('modo-online')?.classList.toggle('on', online);
+  g('modo-local')?.classList.toggle('on', !online);
+  // No online não se define quantidade nem nomes: quem entrar pelo link joga.
+  if (g('bloco-qtd'))         g('bloco-qtd').style.display = online ? 'none' : '';
+  if (g('bloco-nomes'))       g('bloco-nomes').style.display = online ? 'none' : '';
+  if (g('bloco-acao-online')) g('bloco-acao-online').style.display = online ? '' : 'none';
+  if (g('bloco-acao-local'))  g('bloco-acao-local').style.display = online ? 'none' : '';
+  if (g('modo-desc'))         g('modo-desc').textContent = online
+    ? 'Cada um joga do seu PC. Você manda o link e quem entrar já vira um time — sem limite de gente.'
+    : 'Todo mundo na mesma tela, revezando o mouse.';
+}
+
+function toggleExigirInicial() {
+  draftExigirInicial = !draftExigirInicial;
+  document.getElementById('d-inicial-tog').classList.toggle('on', draftExigirInicial);
+  // Sem fase de inicial, sortear a geração do inicial não significa nada.
+  const linha = document.getElementById('d-starter-gen-row');
+  if (linha) { linha.style.opacity = draftExigirInicial ? '' : '.4'; linha.style.pointerEvents = draftExigirInicial ? '' : 'none'; }
+  if (!draftExigirInicial && starterGenRandomOn) toggleStarterGenRandom();
+}
 // Liga/desliga uma tag. `btnId` é o botão que reflete o estado (setup ou barra do draft).
 function toggleDraftTag(key, btnId) {
+  if (sala) return;   // numa sala as tags vêm da config e não mudam
   draftShowTag[key] = !draftShowTag[key];
   document.getElementById(btnId)?.classList.toggle('on', draftShowTag[key]);
   if (draft) {
@@ -1986,15 +2123,33 @@ async function openDetail(id) {
   catch { document.getElementById('modal-head').innerHTML = '<p style="padding:2rem;color:var(--tx2)">Erro ao carregar.</p>'; }
 }
 
+// Abre a ficha só pra consulta (Pokémon já pickado ou banido): sem botão de
+// confirmar. Zera a ação pendente pra não herdar footer de um modal anterior.
+function verPokemon(id) {
+  modalDraftAction = null;
+  openDetail(id);
+}
+
 // Opens the full detail modal from a draft ban/pick tile, with a confirm footer to lock in the choice.
 function openDraftDetail(id, mode, extra) {
+  // Fora da vez, a ficha abre só pra consulta — sem botão de confirmar.
+  if (!minhaVez()) { verPokemon(id); return; }
   modalDraftAction = {mode, id, name: extra.name, type: extra.type};
   openDetail(id);
 }
 function renderModalDraftFooter() {
   const footer = document.getElementById('modal-draft-actions');
   if (!footer) return;
-  if (!modalDraftAction) { footer.classList.remove('show'); footer.innerHTML = ''; return; }
+  if (!modalDraftAction) {
+    // Num draft rolando, explica por que não há botão em vez de só sumir com ele.
+    if (draft && draft.fase !== 'fim' && sala && !minhaVez()) {
+      footer.classList.add('show');
+      footer.innerHTML = '<span class="modal-so-consulta">👀 Consultando — é a vez de ' +
+                         nomeExibidoTime(timeDaVez()) + '</span>';
+      return;
+    }
+    footer.classList.remove('show'); footer.innerHTML = ''; return;
+  }
   const {mode, name} = modalDraftAction;
   const label = mode === 'ban' ? `🚫 Confirmar ban de ${fmt(name)}` : `✅ Confirmar pick de ${fmt(name)}`;
   const cls = mode === 'ban' ? 'btn-primary' : 'btn-purple';
@@ -2321,10 +2476,19 @@ function openDraftSetup() {
   nav('scr-draft-setup');
   const body = document.getElementById('draft-setup-body');
   body.innerHTML = `
-    <span class="sect-lbl">Número de times</span>
-    <div class="cnt-row" id="d-team-cnt"></div>
-    <span class="sect-lbl">Nomes dos times</span>
-    <div class="draft-team-grid" id="d-team-names"></div>
+    <div class="modo-tabs">
+      <button id="modo-online" class="on" onclick="setModoDraft('online')">🌐 Online</button>
+      <button id="modo-local" onclick="setModoDraft('local')">🖥 Offline</button>
+    </div>
+    <p class="io-hint" id="modo-desc" style="margin:0 0 14px"></p>
+    <div id="bloco-qtd">
+      <span class="sect-lbl">Número de times</span>
+      <div class="cnt-row" id="d-team-cnt"></div>
+    </div>
+    <div id="bloco-nomes" style="display:none">
+      <span class="sect-lbl">Nomes dos times</span>
+      <div class="draft-team-grid" id="d-team-names"></div>
+    </div>
     <span class="sect-lbl">Picks por time</span>
     <div class="cnt-row" id="d-picks-cnt"></div>
     <span class="sect-lbl">Formato dos picks</span>
@@ -2335,17 +2499,43 @@ function openDraftSetup() {
     <p class="io-hint" id="d-mode-desc" style="margin:0 0 8px">Livre: escolha qualquer Pokémon disponível da pool.</p>
     <span class="sect-lbl">Gerações do Draft</span>
     <div class="gen-row" id="d-gens"></div>
-    <span class="sect-lbl">Opções</span>
-    <div class="tog-row"><button class="tog on" id="d-bans-tog" onclick="toggleUseBans()"></button><span class="tog-lbl">Ter fase de bans</span></div>
-    <div class="tog-row"><button class="tog" id="d-starter-gen-tog" onclick="toggleStarterGenRandom()"></button><span class="tog-lbl">Sortear geração do inicial de cada time</span></div>
-    ${DRAFT_TAGS.map(t => `<div class="tog-row"><button class="tog" id="d-tag-${t.key}" onclick="toggleDraftTag('${t.key}','d-tag-${t.key}')"></button><span class="tog-lbl">Mostrar ${t.label}</span></div>`).join('')}
-    <button class="btn-start" onclick="startDraft()">Iniciar Draft (nesta tela) →</button>
-    <div class="sect-lbl" style="margin-top:14px">Jogar cada um no seu PC</div>
-    <button class="btn-start" id="btn-criar-sala" style="background:linear-gradient(90deg,#6d28d9,#a855f7)" onclick="criarSalaOnline()">🌐 Criar sala online</button>
-    <button class="btn-back" style="width:100%;margin-top:8px" onclick="renderEntrarSala()">↳ Entrar numa sala com código</button>`;
+    <span class="sect-lbl">Regras da partida</span>
+    <div class="opt-group">
+      <div class="opt-row" onclick="toggleUseBans()">
+        <button class="tog on" id="d-bans-tog" type="button" onclick="event.stopPropagation();toggleUseBans()"></button>
+        <span class="opt-txt"><b>Fase de bans</b><small>Cada time bane um Pokémon por tipo antes dos picks</small></span>
+      </div>
+      <div class="opt-row" onclick="toggleExigirInicial()">
+        <button class="tog on" id="d-inicial-tog" type="button" onclick="event.stopPropagation();toggleExigirInicial()"></button>
+        <span class="opt-txt"><b>Primeiro pick tem que ser um inicial</b><small>Começa o time por um Charizard, Greninja e afins</small></span>
+      </div>
+      <div class="opt-row" id="d-starter-gen-row" onclick="toggleStarterGenRandom()">
+        <button class="tog" id="d-starter-gen-tog" type="button" onclick="event.stopPropagation();toggleStarterGenRandom()"></button>
+        <span class="opt-txt"><b>Sortear a geração do inicial</b><small>Cada um recebe uma geração e escolhe o inicial dela</small></span>
+      </div>
+    </div>
+
+    <span class="sect-lbl">Pokémon liberados</span>
+    <p class="io-hint" style="margin:0 0 8px">Desligado, some da pool. Numa sala isso vira regra e ninguém muda no meio.</p>
+    <div class="opt-group opt-grid">
+      ${DRAFT_TAGS.map(t => `
+      <div class="opt-row" onclick="toggleDraftTag('${t.key}','d-tag-${t.key}')">
+        <button class="tog" id="d-tag-${t.key}" type="button" onclick="event.stopPropagation();toggleDraftTag('${t.key}','d-tag-${t.key}')"></button>
+        <span class="opt-txt"><b>${t.label}</b><small>${TAG_DESC[t.key] || ''}</small></span>
+      </div>`).join('')}
+    </div>
+    <div id="bloco-acao-online">
+      <button class="btn-start" id="btn-criar-sala" style="background:linear-gradient(90deg,#6d28d9,#a855f7)" onclick="iniciarCriacaoSala()">🌐 Criar sala e convidar</button>
+      <button class="btn-back" style="width:100%;margin-top:8px" onclick="iniciarEntradaSala()">↳ Entrar numa sala com código</button>
+    </div>
+    <div id="bloco-acao-local" style="display:none">
+      <button class="btn-start" onclick="startDraft()">▶ Iniciar Draft</button>
+    </div>`;
+  setModoDraft(modoDraft);
   starterGenRandomOn = false;
   draftArenaOn = false;
   draftUseBans = true;
+  draftExigirInicial = true;
   DRAFT_TAGS.forEach(t => { draftShowTag[t.key] = false; });
 
   // Team count buttons
@@ -2400,12 +2590,16 @@ function lerConfigSetup() {
   for (let i = 1; i <= cnt; i++) nomes.push(document.getElementById('dt-' + i)?.value || ('Time ' + i));
   const gens = [];
   for (let i = 1; i <= 9; i++) if (document.getElementById('dg-' + i)?.classList.contains('sel')) gens.push(i);
-  if (!gens.length) { alert('Selecione ao menos uma geração para o Draft.'); return null; }
+  if (!gens.length) { toast('Selecione ao menos uma geração para o Draft.', 'err'); return null; }
   return {
-    nomes, picks, gens,
+    // No online a lista de times nasce vazia: ela é montada com quem entrou,
+    // no momento em que o host inicia o draft.
+    nomes: modoDraft === 'online' ? [] : nomes,
+    picks, gens,
     arena: draftArenaOn,
     useBans: draftUseBans,
     starterGenPerTeam: starterGenRandomOn,
+    exigirInicial: draftExigirInicial,
     tags: {...draftShowTag},
   };
 }
@@ -2480,6 +2674,8 @@ function montarDraft(config, derivados, estado) {
     arena: config.arena,
     useBans: config.useBans,
     starterGenPerTeam: config.starterGenPerTeam,
+    // Config antiga (sem o campo) continua exigindo inicial, como era antes.
+    exigirInicial: config.exigirInicial !== false,
     // ── estado mutável ──
     fase: estado.fase,
     phase: estado.fase, // compat com código antigo
@@ -2555,14 +2751,14 @@ function renderTeamSidePanel(team, idx, opts) {
   let slotsHtml = '';
   if (opts.showPicks) {
     const filled = team.picks.map(p =>
-      `<div class="pick-slot"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png"/><span class="pick-slot-name">${fmt(p.name)}</span></div>`
+      `<div class="pick-slot vervel" onclick="verPokemon(${p.id})" title="Ver ${fmt(p.name)}"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png"/><span class="pick-slot-name">${fmt(p.name)}</span></div>`
     ).join('');
     const empty = Array(Math.max(0, (draft.picks || 0) - team.picks.length)).fill('<div class="pick-slot"></div>').join('');
     slotsHtml = `<div class="pick-slots">${filled}${empty}</div>`;
   }
   const starterGenBadge = (draft.starterGenPerTeam && draft.teamStarterGen && team.picks.length === 0)
     ? `<span class="starter-gen-badge">🌟 Gen ${draft.teamStarterGen[idx]}</span>` : '';
-  card.innerHTML = `<div class="side-team-name"><span>${team.name}</span>${opts.active ? '<span class="pick-active-lbl" title="Escolhendo">▶</span>' : ''}</div>${starterGenBadge}${slotsHtml}`;
+  card.innerHTML = `<div class="side-team-name"><span>${nomeExibidoTime(idx)}</span>${opts.active ? '<span class="pick-active-lbl" title="Escolhendo">▶</span>' : ''}</div>${starterGenBadge}${slotsHtml}`;
   return card;
 }
 function buildDraftLayout(centerEl, opts) {
@@ -2621,13 +2817,22 @@ function typePillsHtml(types) {
 function buildTagToggleRow(prefix) {
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;';
+  // Numa sala isso é regra da partida, definida na criação: vira só leitura.
+  const travado = !!sala;
   DRAFT_TAGS.forEach(t => {
     const id = prefix + '-tag-' + t.key;
     const chip = document.createElement('button');
-    chip.type = 'button'; chip.className = 'tag-chip'; chip.id = id;
+    chip.type = 'button'; chip.className = 'tag-chip' + (travado ? ' travado' : ''); chip.id = id;
     chip.textContent = t.label;
     chip.classList.toggle('on', draftShowTag[t.key]);
-    chip.onclick = () => toggleDraftTag(t.key, id);
+    if (travado) {
+      chip.disabled = true;
+      chip.title = draftShowTag[t.key]
+        ? t.label + ' liberados nesta sala'
+        : t.label + ' bloqueados nesta sala (definido na criação)';
+    } else {
+      chip.onclick = () => toggleDraftTag(t.key, id);
+    }
     row.appendChild(chip);
   });
   return row;
@@ -2718,7 +2923,7 @@ function renderBanPhase() {
   // Turn banner (single line)
   const banner = document.createElement('div'); banner.className = 'turn-banner';
   banner.style.setProperty('--tcolor', TEAM_COLORS[curTeamIdx % TEAM_COLORS.length]);
-  banner.innerHTML = `<div class="turn-team">⚔ ${curTeam.name} <span class="turn-sub" style="margin-left:6px">— escolha um tipo para banir</span></div><div class="turn-prog">Ban ${draft.banTurn + 1}/${draft.banCount}</div>`;
+  banner.innerHTML = `<div class="turn-team">⚔ ${nomeExibidoTime(curTeamIdx)} <span class="turn-sub" style="margin-left:6px">— escolha um tipo para banir</span></div><div class="turn-prog">Ban ${draft.banTurn + 1}/${draft.banCount}</div>`;
   center.appendChild(banner);
 
   // Skip bans + gen filter, same row
@@ -2730,8 +2935,9 @@ function renderBanPhase() {
     skipBtn.className = 'btn-back';
     skipBtn.style.cssText = 'border-color:#7c3aed;color:#7c3aed;';
     skipBtn.textContent = '⏩ Pular bans';
-    skipBtn.onclick = () => {
-      if (confirm('Pular os bans restantes e ir direto para a fase de picks?')) startPickPhase();
+    skipBtn.onclick = async () => {
+      if (await confirmar('Pular os bans?', 'Os bans restantes são descartados e o draft vai direto pros picks.',
+                          {ok: 'Pular bans'})) startPickPhase();
     };
     toolRow.appendChild(skipBtn);
   }
@@ -2748,6 +2954,8 @@ function renderBanPhase() {
     Object.entries(draft.typesBanned).forEach(([type, poke]) => {
       const chip = document.createElement('div'); chip.className = 'banned-chip';
       chip.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png" style="image-rendering:pixelated"/>${fmt(poke.name)}`;
+      chip.classList.add('vervel'); chip.title = 'Ver ' + fmt(poke.name);
+      chip.onclick = () => verPokemon(poke.id);
       bl.appendChild(chip);
     });
     center.appendChild(bl);
@@ -2845,6 +3053,8 @@ function renderPickPhase() {
     Object.entries(draft.typesBanned).forEach(([type, poke]) => {
       const chip = document.createElement('div'); chip.className = 'banned-chip';
       chip.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png" style="image-rendering:pixelated"/>${fmt(poke.name)}`;
+      chip.classList.add('vervel'); chip.title = 'Ver ' + fmt(poke.name);
+      chip.onclick = () => verPokemon(poke.id);
       bl.appendChild(chip);
     });
     center.appendChild(bl);
@@ -2852,7 +3062,7 @@ function renderPickPhase() {
 
   const banner = document.createElement('div'); banner.className = 'turn-banner';
   banner.style.setProperty('--tcolor', TEAM_COLORS[curTeamIdx % TEAM_COLORS.length]);
-  banner.innerHTML = `<div class="turn-team">🎯 ${curTeam.name} <span class="turn-sub" style="margin-left:6px">— pick ${curTeam.picks.length + 1}/${draft.picks}</span></div><div class="turn-prog">Pick ${draft.pickTurn + 1}/${totalPicks}</div>`;
+  banner.innerHTML = `<div class="turn-team">🎯 ${nomeExibidoTime(curTeamIdx)} <span class="turn-sub" style="margin-left:6px">— pick ${curTeam.picks.length + 1}/${draft.picks}</span></div><div class="turn-prog">Pick ${draft.pickTurn + 1}/${totalPicks}</div>`;
   center.appendChild(banner);
 
   // Modo arena: em vez da pool inteira com filtros, 3 opções sorteadas.
@@ -2924,7 +3134,7 @@ function renderPickPoolGrid() {
     if (teamSpecific.length) starterSourceIds = teamSpecific;
   }
   const availableStarters = starterSourceIds.filter(id => !draft.bannedIds.has(id) && !draft.pickedIds.has(id));
-  const inStarterPhase = draft.pickTurn < numTeams && availableStarters.length > 0;
+  const inStarterPhase = draft.exigirInicial && draft.pickTurn < numTeams && availableStarters.length > 0;
   let showList = inStarterPhase ? availableStarters : allAvailable;
   if (!inStarterPhase) {
     if (draft._pickGens.size) showList = showList.filter(id => draft._pickGens.has(pokeGen(id)));
@@ -2975,7 +3185,7 @@ function ensureArenaOffer(curTeamIdx) {
   // Primeiro pick de cada time continua sendo inicial, como no modo livre.
   let fonte = disponivel;
   const numTeams = draft.teams.length;
-  if (draft.pickTurn < numTeams) {
+  if (draft.exigirInicial && draft.pickTurn < numTeams) {
     let starters = [...draft.startersInPool];
     if (draft.starterGenPerTeam && draft.teamStarterGen) {
       const g = draft.teamStarterGen[curTeamIdx];
@@ -2997,7 +3207,7 @@ function buildArenaPanel(curTeamIdx) {
   wrap.className = 'ar-wrap';
 
   const oferta = ensureArenaOffer(curTeamIdx);
-  const inicial = draft.pickTurn < draft.teams.length;
+  const inicial = draft.exigirInicial && draft.pickTurn < draft.teams.length;
 
   const lead = document.createElement('p');
   lead.className = 'ar-lead';
@@ -3096,17 +3306,39 @@ function validarAcao(acao, time) {
     if (draft.fase !== 'ban') return false;
     if (draft.typesBanned[acao.tipoPoke]) return false;
     if (draft.bannedIds.has(acao.id)) return false;
+    if (!passesTagFilter(acao.id)) return false;
     return true;
   }
   if (acao.tipo === 'pick') {
     if (draft.fase !== 'pick') return false;
     if (draft.bannedIds.has(acao.id) || draft.pickedIds.has(acao.id)) return false;
     if (!draft.pool.has(acao.id)) return false;
+    if (!passesTagFilter(acao.id)) return false;   // lendário/paradox bloqueado na sala
+    if (naFaseDeIniciais(time) && !ehInicialValido(acao.id, time)) return false;
     // No modo arena, só vale um dos 3 sorteados.
     if (draft.arena && draft.arenaOffer && !draft.arenaOffer.includes(acao.id)) return false;
     return true;
   }
   return false;
+}
+
+// Este turno é de escolha de inicial? Mesma regra que a tela usa: se não sobrou
+// nenhum inicial livre, a fase cai e o time escolhe da pool normal.
+function naFaseDeIniciais(time) {
+  if (!draft.exigirInicial || draft.pickTurn >= draft.teams.length) return false;
+  return [...draft.startersInPool].some(id => ehInicialValido(id, time)
+    && !draft.bannedIds.has(id) && !draft.pickedIds.has(id));
+}
+
+// Na fase de iniciais, confere se o id é de fato um inicial elegível pro time.
+function ehInicialValido(id, time) {
+  if (!draft.startersInPool.has(id)) return false;
+  if (draft.starterGenPerTeam && draft.teamStarterGen) {
+    const g = draft.teamStarterGen[time];
+    const faixa = GEN[g];
+    if (faixa && (id < faixa[0] || id > faixa[1])) return false;
+  }
+  return true;
 }
 
 // Aplica a ação ao estado. Não desenha nada e não fala com a rede.
@@ -3132,6 +3364,29 @@ function executarAcao(acao, time) {
   }
 }
 
+// Copia os picks de um time do draft pro montador de comps.
+async function enviarParaComp(idxTime, btn) {
+  const picks = (draft.teams[idxTime].picks || []).slice(0, COMP_SLOTS);
+  if (!picks.length) return;
+  if (comp.some(Boolean) && !await confirmar(
+        'Substituir o time no Comp?',
+        'O time que está montado agora vai ser trocado pelos picks deste draft. Isso não dá pra desfazer.',
+        {ok: 'Substituir', perigo: true})) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Carregando...'; }
+  const novo = Array.from({length: COMP_SLOTS}, () => null);
+  await Promise.all(picks.map(async (p, i) => {
+    try { novo[i] = await montarSlotComp(p.id); } catch (e) {}
+  }));
+  comp = novo;
+  compFormat = '6v6';
+  document.getElementById('fmt-6v6')?.classList.add('on');
+  document.getElementById('fmt-2v2')?.classList.remove('on');
+
+  openComp();
+  setNavAct([...document.querySelectorAll('.tnav-btn')].find(b => b.textContent.trim() === 'Comp'));
+}
+
 function showDraftResult(container) {
   const h = document.createElement('h3');
   h.style.cssText = 'font-size:16px;font-weight:900;margin-bottom:8px;color:var(--tx)';
@@ -3144,6 +3399,8 @@ function showDraftResult(container) {
     Object.entries(draft.typesBanned).forEach(([type, poke]) => {
       const chip = document.createElement('div'); chip.className = 'banned-chip';
       chip.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png" style="image-rendering:pixelated"/>${fmt(poke.name)}`;
+      chip.classList.add('vervel'); chip.title = 'Ver ' + fmt(poke.name);
+      chip.onclick = () => verPokemon(poke.id);
       bl.appendChild(chip);
     });
     container.appendChild(bl);
@@ -3154,9 +3411,16 @@ function showDraftResult(container) {
     const card = document.createElement('div'); card.className = 'result-team-card';
     card.style.borderLeft = `4px solid ${TEAM_COLORS[idx % TEAM_COLORS.length]}`;
     const picksHtml = team.picks.map(p =>
-      `<div class="result-poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png" loading="lazy"/><span>${fmt(p.name)}</span></div>`
+      `<div class="result-poke vervel" onclick="verPokemon(${p.id})" title="Ver ${fmt(p.name)}"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png" loading="lazy"/><span>${fmt(p.name)}</span></div>`
     ).join('');
-    card.innerHTML = `<div class="result-team-name">🏅 ${team.name}</div><div class="result-picks">${picksHtml}</div>`;
+    card.innerHTML = `<div class="result-team-name">🏅 ${nomeExibidoTime(idx)}</div><div class="result-picks">${picksHtml}</div>`;
+    // Leva este time pro Comp, onde dá pra escolher item/passiva/golpes e ver
+    // as tabelas de fraqueza e cobertura.
+    const btnComp = document.createElement('button');
+    btnComp.className = 'btn-analisar';
+    btnComp.textContent = '🧩 Analisar no Comp';
+    btnComp.onclick = () => enviarParaComp(idx, btnComp);
+    card.appendChild(btnComp);
     rg.appendChild(card);
   });
   container.appendChild(rg);
@@ -3231,8 +3495,10 @@ async function toggleItem(card) {
   } catch { hint.textContent = 'Erro ao carregar.'; }
 }
 
-function abortDraft() {
-  if (!confirm('Sair do draft atual?')) return;
+async function abortDraft() {
+  if (!await confirmar('Sair do draft?', sala
+        ? 'Você sai da sala. O draft continua para os outros.'
+        : 'O draft atual será descartado.', {ok: 'Sair', perigo: true})) return;
   if (sala) { sairDaSala(); return; }
   draft = null; openDraftSetup(); setNavAct(document.querySelectorAll('.tnav-btn')[0]);
 }
@@ -3290,12 +3556,27 @@ let compFormat = '6v6';
 let itemIndexCache = null;
 let itemDescObserver = null;
 
+// Só faz sentido voltar se existe um draft concluído esperando.
+function draftConcluido() {
+  return !!(draft && draft.pickOrder && draft.pickTurn >= draft.pickOrder.length);
+}
+function voltarAoDraft() {
+  if (!draftConcluido()) return;
+  nav('scr-draft-pick');
+  renderFaseAtual();
+  setNavAct([...document.querySelectorAll('.tnav-btn')].find(b => b.textContent.trim() === 'Draft'));
+}
+
 function openComp() {
   nav('scr-comp');
+  const btn = document.getElementById('comp-voltar-draft');
+  if (btn) btn.style.display = draftConcluido() ? '' : 'none';
   renderComp();
 }
-function clearComp() {
-  if (comp.some(Boolean) && !confirm('Limpar todos os Pokémon do time?')) return;
+async function clearComp() {
+  if (comp.some(Boolean) && !await confirmar('Limpar o time?',
+        'Todos os Pokémon, itens, passivas e golpes escolhidos serão removidos.',
+        {ok: 'Limpar', perigo: true})) return;
   comp = Array.from({length: COMP_SLOTS}, () => null);
   renderComp();
 }
@@ -3320,7 +3601,7 @@ function toggleActive(i) {
   const slot = comp[i];
   if (!slot) return;
   if (!slot.active && comp.filter(s => s && s.active).length >= ACTIVE_2V2) {
-    alert(`Você já escalou ${ACTIVE_2V2} Pokémon. Tire um antes de colocar outro.`);
+    toast(`Você já escalou ${ACTIVE_2V2} Pokémon — tire um antes de colocar outro.`, 'err');
     return;
   }
   slot.active = !slot.active;
@@ -3603,7 +3884,7 @@ function buildCompText() {
 }
 
 async function exportComp() {
-  if (!comp.some(Boolean)) { alert('Monte um time antes de exportar.'); return; }
+  if (!comp.some(Boolean)) { toast('Monte um time antes de exportar.', 'err'); return; }
   const text = buildCompText();
   const btn = document.getElementById('comp-export');
   const restore = () => setTimeout(() => { btn.textContent = '📋 Exportar'; }, 1800);
@@ -3869,8 +4150,19 @@ async function choosePokemon(slotIdx, id) {
   const list = document.getElementById('cp-list');
   list.innerHTML = '<div class="cp-empty">Carregando Pokémon...</div>';
   try {
-    const p = await api('https://pokeapi.co/api/v2/pokemon/' + id);
-    comp[slotIdx] = {
+    comp[slotIdx] = await montarSlotComp(id);
+    closePicker();
+    renderComp();
+  } catch (e) {
+    list.innerHTML = '<div class="cp-empty">Erro ao carregar. Tente outro.</div>';
+  }
+}
+
+// Constrói um slot do Comp a partir de um id. Usado pelo picker e pelo botão
+// que manda o time do draft direto pra análise.
+async function montarSlotComp(id) {
+  const p = await api('https://pokeapi.co/api/v2/pokemon/' + id);
+  return {
       id,
       name: p.name,
       types: p.types.map(t => t.type.name),
@@ -3879,12 +4171,7 @@ async function choosePokemon(slotIdx, id) {
       moveRefs: p.moves.map(m => ({name: m.move.name, url: m.move.url})),
       ability: null, item: null, moves: [null, null, null, null],
       mega: null, megaWarn: null, active: false,
-    };
-    closePicker();
-    renderComp();
-  } catch (e) {
-    list.innerHTML = '<div class="cp-empty">Erro ao carregar. Tente outro.</div>';
-  }
+  };
 }
 
 // ── 2. Habilidade ──────────────────────────────────────────────────────────
@@ -4768,12 +5055,38 @@ let salaDerivados = null;       // pool/typeCache — cada cliente calcula o seu
 let canalSala = null;
 let participantesCache = [];
 
+// O painel do Supabase mostra várias URLs; a certa é só o domínio do projeto.
+// Se vier com /rest/v1 ou barra no fim, o supabase-js duplicaria o caminho e o
+// servidor responderia "Invalid path specified in request URL". Limpamos aqui.
+function normalizarUrlSupabase(u) {
+  return String(u || '').trim()
+    .replace(/\/(rest|auth|realtime|storage)\/v1\/?$/i, '')
+    .replace(/\/+$/, '');
+}
+
 function supaPronto() {
   const cfg = window.POKEDRAFT_CONFIG || {};
-  if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return false;
+  const url = normalizarUrlSupabase(cfg.SUPABASE_URL);
+  const key = String(cfg.SUPABASE_ANON_KEY || '').trim();
+  if (!url || !key) return false;
   if (!window.supabase) return false;
-  if (!supa) supa = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  if (!supa) supa = window.supabase.createClient(url, key);
   return true;
+}
+
+// Checagem amigável antes de tentar usar a sala.
+function diagnosticarSupabase() {
+  const cfg = window.POKEDRAFT_CONFIG || {};
+  if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY)
+    return 'Supabase não configurado — preencha o config.js (veja o README).';
+  if (!window.supabase)
+    return 'A biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.';
+  const url = normalizarUrlSupabase(cfg.SUPABASE_URL);
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url))
+    return 'A SUPABASE_URL parece errada. Esperado algo como https://SEU-PROJETO.supabase.co — encontrado: ' + cfg.SUPABASE_URL;
+  if (String(cfg.SUPABASE_ANON_KEY).split('.').length !== 3)
+    return 'A SUPABASE_ANON_KEY não parece uma chave válida (deve começar com "eyJ" e ter 3 partes separadas por ponto).';
+  return null;
 }
 
 // Sem I, O, 0 e 1 pra ninguém errar ao digitar o código.
@@ -4782,6 +5095,16 @@ function codigoAleatorio() {
   let s = '';
   for (let i = 0; i < 5; i++) s += alfabeto[Math.floor(Math.random() * alfabeto.length)];
   return s;
+}
+
+// Nome de exibição do jogador. Fica salvo entre sessões, então só se digita
+// uma vez — não é por sala.
+const CHAVE_NOME = 'pokedraft:nome';
+function nomeJogador() { return (localStorage.getItem(CHAVE_NOME) || '').trim(); }
+function salvarNomeJogador(n) {
+  n = String(n || '').trim().slice(0, 20);
+  if (n) localStorage.setItem(CHAVE_NOME, n); else localStorage.removeItem(CHAVE_NOME);
+  return n;
 }
 
 // Token guardado por sala, pra sobreviver a um F5.
@@ -4795,10 +5118,9 @@ function barraSala() {
   if (!sala) { box.style.display = 'none'; return box; }
   box.className = 'sala-bar';
   const vez = timeDaVez();
-  const nomeVez = (draft && draft.teams[vez]) ? draft.teams[vez].name : '—';
-  const euSou = sala.meuTime == null
-    ? 'Espectador'
-    : ((draft && draft.teams[sala.meuTime]) ? draft.teams[sala.meuTime].name : 'Time ' + (sala.meuTime + 1));
+  const nomeVez = nomeExibidoTime(vez);
+  // O nome vem da sala, não do localStorage: é o que os outros estão vendo.
+  const euSou = sala.meuTime == null ? 'Espectador' : nomeExibidoTime(sala.meuTime);
 
   box.innerHTML = '<span class="sala-cod">' + sala.codigo + '</span>' +
     '<span class="sala-eu">Você: <b>' + euSou + '</b>' + (sala.souHost ? ' · host' : '') + '</span>' +
@@ -4813,13 +5135,26 @@ function linkConvite() {
 }
 async function copiarConvite() {
   const url = linkConvite();
-  try { await navigator.clipboard.writeText(url); alert('Link copiado:\n' + url); }
-  catch (e) { prompt('Copie o link do convite:', url); }
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Link copiado', 'ok', url);
+  } catch (e) {
+    // Sem permissão de clipboard: copia via textarea temporário.
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.style.cssText = 'position:fixed;top:-9999px';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e2) {}
+    ta.remove();
+    toast(ok ? 'Link copiado' : 'Copie o link manualmente', ok ? 'ok' : 'info', url);
+  }
 }
 
 // ── Criar / entrar ─────────────────────────────────────────────────────────
 async function criarSalaOnline() {
-  if (!supaPronto()) { alert('Supabase não configurado — preencha o config.js (veja o README).'); return; }
+  const problema = diagnosticarSupabase();
+  if (problema) { toast(problema, 'err'); return; }
+  supaPronto();
   const config = lerConfigSetup();
   if (!config) return;
 
@@ -4840,19 +5175,23 @@ async function criarSalaOnline() {
 
   const res = await supa.from('salas').insert({codigo: codigo, config: config, estado: estadoInicial, versao: 0});
   if (res.error) {
-    alert('Erro ao criar sala: ' + res.error.message);
+    toast('Erro ao criar sala', 'err', res.error.message);
     if (btn) { btn.disabled = false; btn.textContent = '🌐 Criar sala online'; }
     return;
   }
 
   sala = {codigo: codigo, souHost: true, meuTime: null, token: null, versao: 0};
+  // Guarda o papel de host antes de escolher time: se der F5 agora, não perde.
+  salvarToken(codigo, {token: null, meuTime: null, souHost: true});
   location.hash = codigo;
   await assinarSala();
-  await entrarNoTime(0);   // host assume o Time 1
+  await entrarNaSala();   // o host já entra na disputa
 }
 
 async function entrarSalaPorCodigo(codigo) {
-  if (!supaPronto()) { alert('Supabase não configurado — preencha o config.js (veja o README).'); return; }
+  const problema = diagnosticarSupabase();
+  if (problema) { toast(problema, 'err'); return; }
+  supaPronto();
   codigo = String(codigo || '').trim().toUpperCase();
   if (!codigo) return;
 
@@ -4860,8 +5199,10 @@ async function entrarSalaPorCodigo(codigo) {
   if (res.error || !res.data) { msgLobby('Sala não encontrada: ' + codigo, 'err'); return; }
 
   const salvo = lerToken(codigo) || {};
-  sala = {codigo: codigo, souHost: !!salvo.souHost, meuTime: salvo.meuTime != null ? salvo.meuTime : null,
-          token: salvo.token || null, versao: res.data.versao};
+  sala = {codigo: codigo, souHost: !!salvo.souHost,
+          slot: salvo.meuTime != null ? salvo.meuTime : null,
+          meuTime: salvo.meuTime != null ? salvo.meuTime : null,
+          token: salvo.token || null, versao: res.data.versao, viraEspectador: !!salvo.espectador};
   salaConfig = res.data.config;
   location.hash = codigo;
 
@@ -4871,24 +5212,55 @@ async function entrarSalaPorCodigo(codigo) {
   await aplicarEstadoRemoto(res.data);
 }
 
-// Reserva um time. A PK (sala, time_idx) impede dois donos pro mesmo time.
-async function entrarNoTime(idx) {
-  if (!sala) return;
-  const nome = (salaConfig && salaConfig.nomes[idx]) || ('Time ' + (idx + 1));
-  const res = await supa.rpc('entrar_time', {p_sala: sala.codigo, p_time: idx, p_nome: nome});
-  if (res.error || !res.data) { msgLobby('Esse time já foi escolhido por outra pessoa.', 'err'); await recarregarLobby(); return; }
+// Entrar é automático: pega a primeira vaga livre. Ninguém escolhe "time 2".
+async function entrarNaSala() {
+  if (!sala || sala.meuTime != null) return;
+  sala.viraEspectador = false;
+  const nome = nomeJogador() || 'Jogador';
+  let linha = null;
 
-  sala.meuTime = idx;
-  sala.token = res.data;
-  salvarToken(sala.codigo, {token: res.data, meuTime: idx, souHost: sala.souHost});
+  const res = await supa.rpc('entrar_auto', {p_sala: sala.codigo, p_nome: nome});
+  if (!res.error) {
+    linha = Array.isArray(res.data) ? res.data[0] : res.data;
+  } else if (/entrar_auto/.test(res.error.message || '')) {
+    // Banco ainda sem a função nova: procura a vaga aqui mesmo. A chave
+    // primária barra colisão, então é só tentar a próxima e repetir.
+    for (let tentativa = 0; tentativa < 8 && !linha; tentativa++) {
+      const lista = await supa.rpc('listar_times', {p_sala: sala.codigo});
+      const usados = new Set((lista.data || []).map(p => p.time_idx));
+      let idx = 0; while (usados.has(idx)) idx++;
+      const ins = await supa.rpc('entrar_time', {p_sala: sala.codigo, p_time: idx, p_nome: nome});
+      if (!ins.error && ins.data) linha = {idx: idx, tok: ins.data};
+    }
+  }
+  if (!linha) { msgLobby('Não consegui te colocar na sala.', 'err'); return; }
+
+  sala.slot = linha.idx;
+  sala.meuTime = linha.idx;   // antes do draft começar, slot e time coincidem
+  sala.token = linha.tok;
+  salvarToken(sala.codigo, {token: linha.tok, meuTime: linha.idx, souHost: sala.souHost});
   await recarregarLobby();
 }
 
-async function sairDoTime() {
+// Trocar de nome já dentro do lobby: reusa a mesma tela e volta pra cá.
+function trocarNomeNoLobby() {
+  renderTelaNome('Trocar nome', 'Como os outros vão te ver no draft.', async () => {
+    if (sala && sala.token) {
+      await supa.rpc('atualizar_nome', {p_sala: sala.codigo, p_token: sala.token, p_nome: nomeJogador()});
+    }
+    await carregarJogadores();
+    renderLobby();
+  });
+}
+
+// Sai da disputa e fica só assistindo.
+async function virarEspectador() {
   if (!sala || sala.meuTime == null) return;
+  if (!await confirmar('Só assistir?', 'Você sai da disputa e acompanha o draft sem pickar. Dá pra voltar enquanto não começar.',
+                       {ok: 'Assistir'})) return;
   await supa.rpc('sair_time', {p_sala: sala.codigo, p_token: sala.token});
-  sala.meuTime = null; sala.token = null;
-  salvarToken(sala.codigo, {token: null, meuTime: null, souHost: sala.souHost});
+  sala.meuTime = null; sala.slot = null; sala.token = null; sala.viraEspectador = true;
+  salvarToken(sala.codigo, {token: null, meuTime: null, souHost: sala.souHost, espectador: true});
   await recarregarLobby();
 }
 
@@ -4911,9 +5283,19 @@ async function aplicarEstadoRemoto(linha) {
   salaConfig = linha.config;
   const est = linha.estado;
 
-  if (est.fase === 'lobby') { renderLobby(); return; }
+  if (est.fase === 'lobby') {
+    // Chegou na sala e ainda não está jogando? Entra automaticamente.
+    if (sala.meuTime == null && !sala.viraEspectador) { await entrarNaSala(); return; }
+    renderLobby(); return;
+  }
   desligarPollLobby();
+  if (!participantesCache.length) await carregarJogadores();
   if (!salaDerivados) salaDerivados = await prepararPool(salaConfig);
+  // Draft rodando: meu time é a posição do meu slot na lista de participantes.
+  if (salaConfig.slots && sala.slot != null) {
+    const i = salaConfig.slots.indexOf(sala.slot);
+    sala.meuTime = i >= 0 ? i : null;   // entrou depois do início = espectador
+  }
   montarDraft(salaConfig, salaDerivados, est);
   renderFaseAtual();
 }
@@ -4931,16 +5313,18 @@ async function publicarEstado() {
 
 // Convidado manda o pedido; quem decide é o host.
 async function enviarAcao(acao) {
-  if (!sala || !sala.token) { alert('Você está como espectador — entre em um time para jogar.'); return; }
+  if (!sala || !sala.token) { toast('Você está assistindo — clique em "Quero jogar" para entrar.', 'err'); return; }
   const res = await supa.from('acoes').insert({sala: sala.codigo, token: sala.token, payload: acao});
-  if (res.error) alert('Não consegui enviar a jogada: ' + res.error.message);
+  if (res.error) toast('Não consegui enviar a jogada', 'err', res.error.message);
 }
 
 // Host recebe um pedido, confere de quem é e aplica se for legal.
 async function processarPedido(linha) {
   const res = await supa.rpc('time_do_token', {p_sala: sala.codigo, p_token: linha.token});
-  const time = res.data;
-  if (time == null) return;                    // token desconhecido
+  if (res.data == null) return;                // token desconhecido
+  // O pedido vem com o slot; o draft trabalha com o índice do time.
+  const time = salaConfig.slots ? salaConfig.slots.indexOf(res.data) : res.data;
+  if (time < 0) return;                        // não está entre os times do draft
   const acao = linha.payload;
   if (!validarAcao(acao, time)) return;        // fora da vez ou jogada ilegal
   executarAcao(acao, time);
@@ -4963,41 +5347,80 @@ async function recarregarLobby() {
 // Como `participantes` não é lida direto (os tokens moram lá), o lobby
 // descobre quem entrou perguntando de tempos em tempos.
 let pollLobby = null;
+// A tela de nome e a de código moram dentro do mesmo `scr-lobby`. Sem esta
+// trava, o polling redesenhava o lobby por cima enquanto a pessoa digitava.
+let subTelaAberta = false;
+
 function ligarPollLobby() {
   if (pollLobby) return;
   pollLobby = setInterval(() => {
     if (!sala || !document.getElementById('scr-lobby').classList.contains('active')) { desligarPollLobby(); return; }
+    if (subTelaAberta) return;
     renderLobby();
   }, 2500);
 }
 function desligarPollLobby() { if (pollLobby) { clearInterval(pollLobby); pollLobby = null; } }
 
+// Quem está em cada time. Usado no lobby e nos painéis durante o draft.
+async function carregarJogadores() {
+  if (!sala) return [];
+  const res = await supa.rpc('listar_times', {p_sala: sala.codigo});
+  participantesCache = res.data || [];
+  return participantesCache;
+}
+function nomeDoTime(idx) {
+  // Depois que o draft começa, o índice do time passa pelo mapa de slots.
+  const slot = (sala && salaConfig && salaConfig.slots) ? salaConfig.slots[idx] : idx;
+  const p = participantesCache.find(x => x.time_idx === slot);
+  if (p && p.nome) return p.nome;
+  // Fallback: o nome congelado na config, caso a pessoa tenha saído.
+  return (salaConfig && salaConfig.nomes && salaConfig.nomes[idx]) || null;
+}
+
+// Como o time aparece na tela. Numa sala o time É a pessoa, então o nome do
+// jogador substitui o "Time N"; vaga ainda livre mostra "Vaga N".
+function nomeExibidoTime(idx) {
+  if (!sala) return (draft && draft.teams[idx]) ? draft.teams[idx].name : 'Time ' + (idx + 1);
+  return nomeDoTime(idx) || ('Vaga ' + (idx + 1));
+}
+
 async function renderLobby() {
+  subTelaAberta = false;
   nav('scr-lobby');
   ligarPollLobby();
   const body = document.getElementById('lb-body');
-  const nomes = (salaConfig && salaConfig.nomes) || [];
-
-  const res = await supa.rpc('listar_times', {p_sala: sala.codigo});
-  participantesCache = res.data || [];
-  const ocupado = i => participantesCache.some(p => p.time_idx === i);
-  const cheio = nomes.length > 0 && nomes.every((_, i) => ocupado(i));
+  await carregarJogadores();
+  const qtd = participantesCache.length;
+  const podeIniciar = qtd >= 2;
   const modo = [salaConfig.arena ? 'Arena (3 opções)' : 'Livre',
                 salaConfig.useBans ? 'com bans' : 'sem bans',
                 salaConfig.picks + ' picks'].join(' · ');
 
-  const linhasTimes = nomes.map((n, i) => {
-    let dir;
-    if (sala.meuTime === i) dir = '<span class="lb-time-quem">você</span><button class="lb-btn" onclick="sairDoTime()">Sair</button>';
-    else if (ocupado(i))    dir = '<span class="lb-time-quem">ocupado</span>';
-    else                    dir = '<span class="lb-time-quem livre">livre</span><button class="lb-btn" onclick="entrarNoTime(' + i + ')">Entrar</button>';
-    return '<div class="lb-time ' + (sala.meuTime === i ? 'meu' : '') + '">' +
-           '<span class="lb-time-nome">' + n + '</span>' + dir + '</div>';
-  }).join('');
+  // A lista agora é só quem já está dentro — não existe "vaga" pré-definida.
+  const linhasTimes = participantesCache
+    .slice().sort((a, b) => a.time_idx - b.time_idx)
+    .map(p => '<div class="lb-time ' + (sala.meuTime === p.time_idx ? 'meu' : '') + '">' +
+      '<span class="lb-time-nome">' + (p.nome || 'Jogador') + '</span>' +
+      (sala.meuTime === p.time_idx
+        ? '<span class="lb-time-quem">você</span>'
+        : '<span class="lb-time-quem">pronto</span>') +
+      '</div>').join('') ||
+    '<div class="lb-msg info">Ninguém entrou ainda.</div>';
+
+  const jogando = sala.meuTime != null;
+  const campoNome = jogando
+    ? '<p class="lb-sub" style="margin:0 0 10px">Você joga como <b>' + (nomeDoTime(sala.meuTime) || nomeJogador()) + '</b>' +
+      ' · <button class="lb-btn" onclick="trocarNomeNoLobby()">trocar nome</button></p>'
+    : '<div class="lb-msg info" style="margin-bottom:10px">👀 Você está assistindo — não vai pickar.</div>';
+
+  // Alternar entre jogar e assistir, sempre visível.
+  const btnPapel = jogando
+    ? '<button class="btn-back" style="width:100%;margin-top:8px" onclick="virarEspectador()">👀 Assistir sem jogar</button>'
+    : '<button class="btn-start" style="margin-top:8px" onclick="entrarNaSala()">🎮 Quero jogar</button>';
 
   const acaoHost = sala.souHost
-    ? '<button class="btn-start" ' + (cheio ? '' : 'disabled') + ' onclick="iniciarDraftDaSala()">' +
-      (cheio ? '▶ Iniciar Draft' : 'Aguardando todos os times...') + '</button>'
+    ? '<button class="btn-start" ' + (podeIniciar ? '' : 'disabled') + ' onclick="iniciarDraftDaSala()">' +
+      (podeIniciar ? '▶ Iniciar Draft com ' + qtd + ' jogadores' : 'Esperando mais gente entrar...') + '</button>'
     : '<div class="lb-msg info">Aguardando o host iniciar o draft.</div>';
 
   body.innerHTML =
@@ -5009,10 +5432,11 @@ async function renderLobby() {
       '<p class="lb-sub" style="margin:12px 0 0;text-align:center">' + modo + '</p>' +
     '</div>' +
     '<div class="lb-card">' +
-      '<p class="lb-title">Times</p>' +
-      '<p class="lb-sub">Você joga pelo time que escolher aqui.</p>' +
+      campoNome +
+      '<p class="lb-title" style="margin-top:16px">Na sala (' + qtd + ')</p>' +
+      '<p class="lb-sub">Quem abrir o link entra automaticamente. Sem limite de gente.</p>' +
       '<div class="lb-times">' + linhasTimes + '</div>' +
-      '<div id="lb-msg"></div>' + acaoHost +
+      '<div id="lb-msg"></div>' + acaoHost + btnPapel +
       '<button class="btn-back" style="width:100%;margin-top:8px" onclick="sairDaSala()">✕ Sair da sala</button>' +
     '</div>';
 }
@@ -5020,6 +5444,17 @@ async function renderLobby() {
 // Host dispara o começo: sorteia a ordem e publica.
 async function iniciarDraftDaSala() {
   if (!sala || !sala.souHost) return;
+  // Os times são exatamente quem está na sala agora, na ordem de entrada.
+  await carregarJogadores();
+  const dentro = participantesCache.slice().sort((a, b) => a.time_idx - b.time_idx);
+  if (dentro.length < 2) { msgLobby('Precisa de pelo menos 2 jogadores.', 'err'); return; }
+  // `slots` liga time do draft (0,1,2...) ao slot do participante, que pode ter
+  // buracos se alguém virou espectador. Vai na config pra todos usarem o mesmo.
+  salaConfig = {...salaConfig,
+    nomes: dentro.map(p => p.nome || 'Jogador'),
+    slots: dentro.map(p => p.time_idx)};
+  await supa.from('salas').update({config: salaConfig}).eq('codigo', sala.codigo);
+
   const sorteio = sortearInicio(salaConfig, salaDerivados.validTypes);
   montarDraft(salaConfig, salaDerivados, {
     fase: salaConfig.useBans ? 'ban' : 'pick',
@@ -5030,6 +5465,7 @@ async function iniciarDraftDaSala() {
     teamStarterGen: sorteio.teamStarterGen,
     arenaOffer: null, arenaOfferTurn: -1,
   });
+  if (sala.slot != null) sala.meuTime = salaConfig.slots.indexOf(sala.slot);
   desligarPollLobby();
   renderFaseAtual();          // gera a 1ª oferta da arena, se for o caso
   await publicarEstado();
@@ -5044,8 +5480,58 @@ async function sairDaSala() {
   setNavAct(document.querySelectorAll('.tnav-btn')[0]);
 }
 
+// ── Tela de nome, exibida ANTES de qualquer sala ───────────────────────────
+// Guarda o que fazer depois de confirmar o nome.
+let aposNome = null;
+
+function renderTelaNome(titulo, subtitulo, aoContinuar) {
+  aposNome = aoContinuar;
+  subTelaAberta = true;
+  nav('scr-lobby');
+  document.getElementById('lb-body').innerHTML =
+    '<div class="lb-card">' +
+      '<p class="lb-title">' + titulo + '</p>' +
+      '<p class="lb-sub">' + subtitulo + '</p>' +
+      '<input class="lb-input nome" id="lb-nome-inicial" maxlength="20" placeholder="Seu apelido" value="' +
+        nomeJogador().replace(/"/g, '&quot;') + '"/>' +
+      '<div id="lb-msg"></div>' +
+      '<button class="btn-start" style="margin-top:12px" onclick="confirmarNome()">Continuar →</button>' +
+      '<button class="btn-back" style="width:100%;margin-top:8px" onclick="voltarDoNome()">← Voltar</button>' +
+    '</div>';
+  const inp = document.getElementById('lb-nome-inicial');
+  inp.focus(); inp.select();
+  inp.onkeydown = e => { if (e.key === 'Enter') confirmarNome(); };
+}
+
+function confirmarNome() {
+  const inp = document.getElementById('lb-nome-inicial');
+  const nome = salvarNomeJogador(inp ? inp.value : '');
+  if (!nome) { msgLobby('Digite um nome pra galera saber quem é você.', 'err'); inp.focus(); return; }
+  subTelaAberta = false;
+  const acao = aposNome; aposNome = null;
+  if (acao) acao();
+}
+
+function voltarDoNome() {
+  aposNome = null;
+  subTelaAberta = false;
+  location.hash = '';
+  openDraftSetup();
+}
+
+// Pontos de entrada: sempre passam pela tela de nome primeiro.
+function iniciarCriacaoSala() {
+  if (!lerConfigSetup()) return;          // valida a config antes de sair da tela
+  renderTelaNome('Antes de criar a sala', 'Como os outros vão te ver no draft.', criarSalaOnline);
+}
+function iniciarEntradaSala(codigoPre) {
+  renderTelaNome('Antes de entrar', 'Como os outros vão te ver no draft.',
+                 () => renderEntrarSala(codigoPre));
+}
+
 // ── Tela de entrada por código ─────────────────────────────────────────────
 function renderEntrarSala(codigoPre) {
+  subTelaAberta = true;
   nav('scr-lobby');
   document.getElementById('lb-body').innerHTML =
     '<div class="lb-card">' +
@@ -5064,7 +5550,85 @@ function renderEntrarSala(codigoPre) {
 // Link com #CODIGO entra direto na sala.
 async function autoEntrarPeloLink() {
   const cod = (location.hash || '').replace('#', '').trim().toUpperCase();
-  if (cod.length === 5 && supaPronto()) await entrarSalaPorCodigo(cod);
+  if (cod.length !== 5 || !supaPronto()) return;
+  // Convite também passa pela tela de nome antes de cair na sala.
+  renderTelaNome('Você foi convidado', 'Sala <b>' + cod + '</b>. Como os outros vão te ver?',
+                 () => entrarSalaPorCodigo(cod));
+}
+
+// Link do tipo .../#ABC12 entra direto na sala. Fica no fim do arquivo de
+// propósito: no topo, `supa` e companhia ainda não foram inicializados.
+window.addEventListener('load', () => { autoEntrarPeloLink(); });
+
+// Clicar num convite de OUTRA sala estando dentro de uma troca de sala.
+window.addEventListener('hashchange', async () => {
+  const cod = (location.hash || '').replace('#', '').trim().toUpperCase();
+  if (cod.length !== 5) return;
+  if (sala && sala.codigo === cod) return;   // já é a sala atual
+  if (sala) {
+    if (!await confirmar('Trocar de sala?', 'Você vai sair da sala ' + sala.codigo + ' e entrar na ' + cod + '.',
+                         {ok: 'Trocar'})) {
+      location.hash = sala.codigo;
+      return;
+    }
+    if (canalSala) { await supa.removeChannel(canalSala); canalSala = null; }
+    desligarPollLobby();
+    sala = null; salaConfig = null; salaDerivados = null; draft = null;
+  }
+  entrarSalaPorCodigo(cod);
+});
+
+// ═══ AVISOS E CONFIRMAÇÃO ═════════════════════════════════════════════════
+// Substituem alert/confirm/prompt do navegador, que travam a página e destoam
+// do resto da interface.
+
+// Aviso discreto no rodapé, some sozinho.
+function toast(texto, tipo, detalhe) {
+  const wrap = document.getElementById('toasts');
+  if (!wrap) return;
+  const icones = {ok: '✔', err: '✕', info: 'ℹ'};
+  const el = document.createElement('div');
+  el.className = 'toast ' + (tipo || 'info');
+  el.innerHTML = '<span class="toast-ico">' + (icones[tipo] || icones.info) + '</span>' +
+                 '<span>' + texto + (detalhe ? '<small>' + detalhe + '</small>' : '') + '</span>';
+  wrap.appendChild(el);
+  const fechar = () => {
+    el.classList.add('saindo');
+    setTimeout(() => el.remove(), 220);
+  };
+  setTimeout(fechar, detalhe ? 4200 : 2800);
+}
+
+// Confirmação em modal. Devolve Promise<boolean>.
+function confirmar(titulo, texto, opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    const ov = document.getElementById('cf-ov');
+    const sim = document.getElementById('cf-sim');
+    const nao = document.getElementById('cf-nao');
+    document.getElementById('cf-tit').textContent = titulo;
+    document.getElementById('cf-txt').textContent = texto || '';
+    sim.textContent = opts.ok || 'Confirmar';
+    nao.textContent = opts.cancelar || 'Cancelar';
+    sim.classList.toggle('perigo', !!opts.perigo);
+    ov.classList.add('open');
+
+    const encerrar = (v) => {
+      ov.classList.remove('open');
+      sim.onclick = nao.onclick = ov.onclick = null;
+      document.removeEventListener('keydown', tecla);
+      resolve(v);
+    };
+    const tecla = e => {
+      if (e.key === 'Escape') encerrar(false);
+      if (e.key === 'Enter') encerrar(true);
+    };
+    sim.onclick = () => encerrar(true);
+    nao.onclick = () => encerrar(false);
+    ov.onclick = e => { if (e.target === ov) encerrar(false); };
+    document.addEventListener('keydown', tecla);
+    sim.focus();
+  });
 }
 
 // ═══ NAV ACTIVE STATE ═══

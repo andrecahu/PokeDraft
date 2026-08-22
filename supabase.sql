@@ -76,6 +76,30 @@ begin
   return v_token;
 end $$;
 
+-- Entra na sala pegando automaticamente a primeira vaga livre.
+-- O `for update` na sala serializa: dois entrando ao mesmo tempo não pegam
+-- o mesmo índice. Teto de 16 jogadores.
+create or replace function entrar_auto(p_sala text, p_nome text)
+returns table (idx int, tok uuid)
+language plpgsql security definer set search_path = public as $$
+declare v_idx int; v_token uuid;
+begin
+  perform 1 from salas where codigo = p_sala for update;
+
+  select min(g.i) into v_idx
+    from generate_series(0, 15) as g(i)
+   where not exists (
+     select 1 from participantes p where p.sala = p_sala and p.time_idx = g.i
+   );
+  if v_idx is null then raise exception 'sala cheia'; end if;
+
+  insert into participantes (sala, time_idx, nome)
+  values (p_sala, v_idx, p_nome)
+  returning token into v_token;
+
+  return query select v_idx, v_token;
+end $$;
+
 -- Larga o time (precisa provar que era seu, com o token).
 create or replace function sair_time(p_sala text, p_token uuid)
 returns void language plpgsql security definer set search_path = public as $$
@@ -97,7 +121,16 @@ returns int language sql security definer set search_path = public as $$
   select time_idx from participantes where sala = p_sala and token = p_token;
 $$;
 
+-- Troca o nome de exibição sem perder o lugar no time.
+create or replace function atualizar_nome(p_sala text, p_token uuid, p_nome text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update participantes set nome = p_nome where sala = p_sala and token = p_token;
+end $$;
+
 grant execute on function entrar_time(text, int, text)  to anon, authenticated;
+grant execute on function entrar_auto(text, text)       to anon, authenticated;
+grant execute on function atualizar_nome(text, uuid, text) to anon, authenticated;
 grant execute on function sair_time(text, uuid)         to anon, authenticated;
 grant execute on function listar_times(text)            to anon, authenticated;
 grant execute on function time_do_token(text, uuid)     to anon, authenticated;
