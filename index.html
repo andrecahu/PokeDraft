@@ -1859,6 +1859,29 @@ async function preloadNames() {
 }
 async function ensureNames() { if (!allNames) await preloadNames(); }
 
+// Índice nome → id para importação, incluindo formas alternativas.
+// `allNames` só tem as 1025 espécies base; times de VGC vêm cheios de formas de
+// batalha (Urshifu-Rapid-Strike, Calyrex-Ice, Landorus-Therian…), que moram em
+// ids acima de 10000 e não apareceriam sem isso.
+let indiceNomesCache = null;
+async function indiceDeNomes() {
+  if (indiceNomesCache) return indiceNomesCache;
+  await ensureNames();
+  const idx = {};
+  Object.entries(allNames || {}).forEach(([id, n]) => { idx[slugKey(n)] = +id; });
+  try {
+    const d = await api('https://pokeapi.co/api/v2/pokemon?limit=10000&offset=0');
+    d.results.forEach(p => {
+      const id = +p.url.split('/').filter(Boolean).pop();
+      const k = slugKey(p.name);
+      // Espécie base ganha da forma quando o nome normaliza igual.
+      if (idx[k] == null || id < idx[k]) idx[k] = id;
+    });
+  } catch (e) { /* fica só com as espécies base */ }
+  indiceNomesCache = idx;
+  return idx;
+}
+
 // ═══ POOL BUILDER ═══
 async function buildPool(finalOnly = true) {
   let pool;
@@ -3865,13 +3888,10 @@ function compField(key, val, isEmpty, onClick, icon) {
 // Showdown não tem conceito de "titular", então formato e escalação vão na linha
 // `=== ... ===`, que é sintaxe válida de nome de time e não quebra o parser deles.
 function buildCompText() {
+  // Sem linha de cabeçalho e sem chaves extras: testado no parser do Pokémon
+  // Showdown, onde qualquer linha a mais vira um Pokémon fantasma ou quebra a
+  // importação. O preço é não guardar quem era titular no 2x2.
   const out = [];
-  if (compFormat === '2v2') {
-    const act = comp.map((s, i) => (s && s.active) ? i + 1 : null).filter(Boolean);
-    out.push(`=== [gen9] PokeDraft 2x2 | titulares: ${act.join(',')} ===`, '');
-  } else {
-    out.push('=== [gen9] PokeDraft 6v6 ===', '');
-  }
   comp.forEach(s => {
     if (!s) return;
     out.push(fmt(s.name) + (s.item ? ' @ ' + itemLabel(s.item.name) : ''));
@@ -3961,8 +3981,7 @@ async function runImport() {
   setImportMsg('Importando...', 'ok');
 
   await ensureNames();
-  const byKey = {};
-  Object.entries(allNames).forEach(([id, n]) => { byKey[slugKey(n)] = +id; });
+  const byKey = await indiceDeNomes();
 
   const {mons, header} = parseShowdown(text);
   if (!mons.length) { setImportMsg('Não encontrei nenhum Pokémon nesse texto.', 'err'); return; }
