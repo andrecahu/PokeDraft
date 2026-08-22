@@ -5173,16 +5173,16 @@ async function criarSalaOnline() {
     teamStarterGen: null, arenaOffer: null, arenaOfferTurn: -1,
   };
 
-  const res = await supa.from('salas').insert({codigo: codigo, config: config, estado: estadoInicial, versao: 0});
-  if (res.error) {
-    toast('Erro ao criar sala', 'err', res.error.message);
-    if (btn) { btn.disabled = false; btn.textContent = '🌐 Criar sala online'; }
+  const res = await supa.rpc('criar_sala', {p_codigo: codigo, p_config: config, p_estado: estadoInicial});
+  if (res.error || !res.data) {
+    toast('Erro ao criar sala', 'err', res.error ? res.error.message : 'sem resposta');
+    if (btn) { btn.disabled = false; btn.textContent = '🌐 Criar sala e convidar'; }
     return;
   }
 
-  sala = {codigo: codigo, souHost: true, meuTime: null, token: null, versao: 0};
-  // Guarda o papel de host antes de escolher time: se der F5 agora, não perde.
-  salvarToken(codigo, {token: null, meuTime: null, souHost: true});
+  // hostToken autoriza publicar o estado. Fica só no navegador de quem criou.
+  sala = {codigo: codigo, souHost: true, meuTime: null, token: null, versao: 0, hostToken: res.data};
+  salvarToken(codigo, {token: null, meuTime: null, souHost: true, hostToken: res.data});
   location.hash = codigo;
   await assinarSala();
   await entrarNaSala();   // o host já entra na disputa
@@ -5199,10 +5199,11 @@ async function entrarSalaPorCodigo(codigo) {
   if (res.error || !res.data) { msgLobby('Sala não encontrada: ' + codigo, 'err'); return; }
 
   const salvo = lerToken(codigo) || {};
-  sala = {codigo: codigo, souHost: !!salvo.souHost,
+  sala = {codigo: codigo, souHost: !!salvo.hostToken,
           slot: salvo.meuTime != null ? salvo.meuTime : null,
           meuTime: salvo.meuTime != null ? salvo.meuTime : null,
-          token: salvo.token || null, versao: res.data.versao, viraEspectador: !!salvo.espectador};
+          token: salvo.token || null, hostToken: salvo.hostToken || null,
+          versao: res.data.versao, viraEspectador: !!salvo.espectador};
   salaConfig = res.data.config;
   location.hash = codigo;
 
@@ -5238,7 +5239,7 @@ async function entrarNaSala() {
   sala.slot = linha.idx;
   sala.meuTime = linha.idx;   // antes do draft começar, slot e time coincidem
   sala.token = linha.tok;
-  salvarToken(sala.codigo, {token: linha.tok, meuTime: linha.idx, souHost: sala.souHost});
+  salvarToken(sala.codigo, {token: linha.tok, meuTime: linha.idx, souHost: sala.souHost, hostToken: sala.hostToken});
   await recarregarLobby();
 }
 
@@ -5260,7 +5261,7 @@ async function virarEspectador() {
                        {ok: 'Assistir'})) return;
   await supa.rpc('sair_time', {p_sala: sala.codigo, p_token: sala.token});
   sala.meuTime = null; sala.slot = null; sala.token = null; sala.viraEspectador = true;
-  salvarToken(sala.codigo, {token: null, meuTime: null, souHost: sala.souHost, espectador: true});
+  salvarToken(sala.codigo, {token: null, meuTime: null, souHost: sala.souHost, hostToken: sala.hostToken, espectador: true});
   await recarregarLobby();
 }
 
@@ -5271,7 +5272,7 @@ async function assinarSala() {
     .on('postgres_changes', {event: '*', schema: 'public', table: 'salas', filter: 'codigo=eq.' + sala.codigo},
         p => aplicarEstadoRemoto(p.new))
     .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'acoes', filter: 'sala=eq.' + sala.codigo},
-        p => { if (sala && sala.souHost) processarPedido(p.new); })
+        p => { if (sala && sala.hostToken) processarPedido(p.new); })
     .subscribe();
 }
 
@@ -5302,12 +5303,13 @@ async function aplicarEstadoRemoto(linha) {
 
 // Host publica o estado atual.
 async function publicarEstado() {
-  if (!sala || !sala.souHost) return;
+  if (!sala || !sala.hostToken) return;
   const nova = sala.versao + 1;
-  const res = await supa.from('salas')
-    .update({estado: serializarEstado(), versao: nova, atualizado: new Date().toISOString()})
-    .eq('codigo', sala.codigo);
-  if (res.error) { console.warn('falha ao publicar estado', res.error); return; }
+  const res = await supa.rpc('publicar_estado', {
+    p_codigo: sala.codigo, p_token: sala.hostToken,
+    p_estado: serializarEstado(), p_versao: nova,
+  });
+  if (res.error) { toast('Não consegui publicar a jogada', 'err', res.error.message); return; }
   sala.versao = nova;
 }
 
@@ -5453,7 +5455,7 @@ async function iniciarDraftDaSala() {
   salaConfig = {...salaConfig,
     nomes: dentro.map(p => p.nome || 'Jogador'),
     slots: dentro.map(p => p.time_idx)};
-  await supa.from('salas').update({config: salaConfig}).eq('codigo', sala.codigo);
+  await supa.rpc('salvar_config', {p_codigo: sala.codigo, p_token: sala.hostToken, p_config: salaConfig});
 
   const sorteio = sortearInicio(salaConfig, salaDerivados.validTypes);
   montarDraft(salaConfig, salaDerivados, {

@@ -7,6 +7,7 @@
 
 drop table if exists acoes cascade;
 drop table if exists participantes cascade;
+drop table if exists salas_host cascade;
 drop table if exists salas cascade;
 
 -- ── Sala: config do draft + estado atual ───────────────────────────────────
@@ -17,6 +18,14 @@ create table salas (
   versao     int         not null default 0,
   criado     timestamptz not null default now(),
   atualizado timestamptz not null default now()
+);
+
+-- ── Segredo do host ────────────────────────────────────────────────────────
+-- Fica numa tabela à parte, sem NENHUMA policy: só as funções abaixo enxergam.
+-- É o que impede um estranho de sobrescrever o draft dos outros.
+create table salas_host (
+  sala  text primary key references salas(codigo) on delete cascade,
+  token uuid not null default gen_random_uuid()
 );
 
 -- ── Quem joga por qual time ────────────────────────────────────────────────
@@ -54,10 +63,12 @@ alter table salas         enable row level security;
 alter table participantes enable row level security;
 alter table acoes         enable row level security;
 
--- Sala: quem tem o código lê (é isso que permite assistir) e escreve.
-create policy salas_ler    on salas for select using (true);
-create policy salas_criar  on salas for insert with check (true);
-create policy salas_editar on salas for update using (true);
+-- Sala: leitura liberada (é o que permite assistir e receber o realtime).
+-- Criar e alterar passam por função, pra exigir o token de host.
+create policy salas_ler on salas for select using (true);
+
+alter table salas_host enable row level security;
+-- salas_host fica sem policy de propósito: ninguém lê o token do host.
 
 -- Ações: qualquer um insere um pedido; o host lê pra processar.
 create policy acoes_ler   on acoes for select using (true);
@@ -74,6 +85,40 @@ begin
   values (p_sala, p_time, p_nome)
   returning token into v_token;
   return v_token;
+end $$;
+
+-- Cria a sala e devolve o token de host (que só quem criou recebe).
+create or replace function criar_sala(p_codigo text, p_config jsonb, p_estado jsonb)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_token uuid;
+begin
+  delete from salas where atualizado < now() - interval '2 days';
+  insert into salas (codigo, config, estado, versao) values (p_codigo, p_config, p_estado, 0);
+  insert into salas_host (sala) values (p_codigo) returning token into v_token;
+  return v_token;
+end $$;
+
+-- Publica o estado do draft. Só o host consegue: sem o token certo, nada muda.
+-- A versão também precisa avançar, o que descarta mensagem atrasada.
+create or replace function publicar_estado(p_codigo text, p_token uuid, p_estado jsonb, p_versao int)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from salas_host h where h.sala = p_codigo and h.token = p_token) then
+    raise exception 'apenas o host pode publicar o estado';
+  end if;
+  update salas set estado = p_estado, versao = p_versao, atualizado = now()
+   where codigo = p_codigo and versao < p_versao;
+  return found;
+end $$;
+
+-- Guarda a config depois que o host monta os times.
+create or replace function salvar_config(p_codigo text, p_token uuid, p_config jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from salas_host h where h.sala = p_codigo and h.token = p_token) then
+    raise exception 'apenas o host pode alterar a config';
+  end if;
+  update salas set config = p_config where codigo = p_codigo;
 end $$;
 
 -- Entra na sala pegando automaticamente a primeira vaga livre.
@@ -128,6 +173,9 @@ begin
   update participantes set nome = p_nome where sala = p_sala and token = p_token;
 end $$;
 
+grant execute on function criar_sala(text, jsonb, jsonb)          to anon, authenticated;
+grant execute on function publicar_estado(text, uuid, jsonb, int) to anon, authenticated;
+grant execute on function salvar_config(text, uuid, jsonb)        to anon, authenticated;
 grant execute on function entrar_time(text, int, text)  to anon, authenticated;
 grant execute on function entrar_auto(text, text)       to anon, authenticated;
 grant execute on function atualizar_nome(text, uuid, text) to anon, authenticated;
@@ -141,16 +189,4 @@ alter publication supabase_realtime add table salas;
 alter publication supabase_realtime add table acoes;
 alter table salas replica identity full;
 
--- ── Limpeza automática ─────────────────────────────────────────────────────
--- Salas paradas há mais de 2 dias somem quando alguém cria uma nova, pra não
--- acumular lixo no plano gratuito.
-create or replace function limpar_salas_antigas() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-  delete from salas where atualizado < now() - interval '2 days';
-  return new;
-end $$;
-
-create trigger salas_limpeza
-  after insert on salas
-  execute function limpar_salas_antigas();
+-- A limpeza de salas antigas acontece dentro de criar_sala().
