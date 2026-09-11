@@ -354,7 +354,8 @@ body::after{
 /* ── MODAL ── */
 .modal{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
-  backdrop-filter:blur(6px);z-index:1000;overflow-y:auto;padding:1.5rem 1rem;
+  backdrop-filter:blur(6px);z-index:1600;overflow-y:auto;padding:1.5rem 1rem;
+  /* 1600: acima do seletor do Comp (1500), pra ficha abrir por cima dele */
 }
 .modal.open{display:block;}
 .modal-box{
@@ -799,7 +800,13 @@ body::after{
   background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;padding:10px;
   display:flex;flex-direction:column;gap:7px;min-height:186px;transition:border-color .15s;
 }
-.comp-slot.filled{border-color:var(--brd2);}
+.comp-slot.filled{border-color:var(--brd2);cursor:grab;}
+.comp-slot.filled:active{cursor:grabbing;}
+/* Arrastar pra reordenar: o que sai fica apagado, onde vai cair acende */
+.dragging{opacity:.35;}
+.comp-slot.drop-alvo{border-color:var(--yellow);box-shadow:0 0 0 2px var(--yellow) inset;transform:scale(1.02);}
+.mv-row.drop-alvo{border-color:var(--yellow);background:rgba(240,196,25,.12);}
+.mv-row:not(.empty){cursor:grab;}
 .comp-slot-empty{
   align-items:center;justify-content:center;cursor:pointer;color:var(--tx3);
   font-size:12px;font-weight:800;border-style:dashed;
@@ -2156,8 +2163,9 @@ function verPokemon(id) {
 // Opens the full detail modal from a draft ban/pick tile, with a confirm footer to lock in the choice.
 function openDraftDetail(id, mode, extra) {
   // Fora da vez, a ficha abre só pra consulta — sem botão de confirmar.
-  if (!minhaVez()) { verPokemon(id); return; }
-  modalDraftAction = {mode, id, name: extra.name, type: extra.type};
+  // O Comp não tem turno: lá o botão aparece sempre.
+  if (mode !== 'comp' && !minhaVez()) { verPokemon(id); return; }
+  modalDraftAction = {mode, id, name: extra.name, type: extra.type, slotIdx: extra.slotIdx};
   openDetail(id);
 }
 function renderModalDraftFooter() {
@@ -2174,7 +2182,9 @@ function renderModalDraftFooter() {
     footer.classList.remove('show'); footer.innerHTML = ''; return;
   }
   const {mode, name} = modalDraftAction;
-  const label = mode === 'ban' ? `🚫 Confirmar ban de ${fmt(name)}` : `✅ Confirmar pick de ${fmt(name)}`;
+  const label = mode === 'ban'  ? `🚫 Confirmar ban de ${fmt(name)}`
+              : mode === 'comp' ? `➕ Adicionar ${fmt(name)} ao time`
+              :                   `✅ Confirmar pick de ${fmt(name)}`;
   const cls = mode === 'ban' ? 'btn-primary' : 'btn-purple';
   footer.classList.add('show');
   footer.innerHTML = `<button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="${cls}" id="modal-confirm-btn">${label}</button>`;
@@ -2184,6 +2194,7 @@ function confirmDraftAction() {
   if (!modalDraftAction) return;
   const a = modalDraftAction; modalDraftAction = null;
   if (a.mode === 'ban') confirmBan(a.type, {id: a.id, name: a.name});
+  else if (a.mode === 'comp') choosePokemon(a.slotIdx, a.id);
   else confirmPick(a.id, a.name);
 }
 function renderDetail(p) {
@@ -3648,18 +3659,99 @@ function renderComp() {
   renderCompAnalysis();
 }
 
+// ── Arrastar pra reordenar ─────────────────────────────────────────────────
+// O que está sendo arrastado agora. Fica numa variável em vez do dataTransfer
+// porque o navegador esconde o conteúdo dele durante o dragover.
+let dragAtual = null;
+
+function limparMarcasDeDrop() {
+  document.querySelectorAll('.drop-alvo').forEach(e => e.classList.remove('drop-alvo'));
+  document.querySelectorAll('.dragging').forEach(e => e.classList.remove('dragging'));
+}
+
+// Torna um card de Pokémon arrastável e/ou alvo de soltura.
+// Soltar em cima de outro slot (cheio ou vazio) troca os dois de lugar.
+function ligarDragDePokemon(el, i, arrastavel) {
+  if (arrastavel) {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => {
+      dragAtual = {tipo: 'poke', de: i};
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      hideInfoTip(); hideTip();
+    });
+    el.addEventListener('dragend', () => { dragAtual = null; limparMarcasDeDrop(); });
+  }
+  el.addEventListener('dragover', e => {
+    if (!dragAtual || dragAtual.tipo !== 'poke' || dragAtual.de === i) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    el.classList.add('drop-alvo');
+  });
+  el.addEventListener('dragleave', e => {
+    // Só limpa se saiu do card mesmo, não de um filho pra outro.
+    if (!el.contains(e.relatedTarget)) el.classList.remove('drop-alvo');
+  });
+  el.addEventListener('drop', e => {
+    if (!dragAtual || dragAtual.tipo !== 'poke') return;
+    e.preventDefault();
+    const de = dragAtual.de;
+    dragAtual = null;
+    if (de === i) return;
+    [comp[de], comp[i]] = [comp[i], comp[de]];
+    renderComp();
+  });
+}
+
+// Mesma ideia para os 4 golpes de um Pokémon: só troca dentro do mesmo card.
+function ligarDragDeGolpe(el, i, k, arrastavel) {
+  if (arrastavel) {
+    el.draggable = true;
+    el.addEventListener('dragstart', e => {
+      e.stopPropagation();   // senão o card inteiro começa a ser arrastado junto
+      dragAtual = {tipo: 'move', slot: i, de: k};
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      hideInfoTip();
+    });
+    el.addEventListener('dragend', e => { e.stopPropagation(); dragAtual = null; limparMarcasDeDrop(); });
+  }
+  el.addEventListener('dragover', e => {
+    if (!dragAtual || dragAtual.tipo !== 'move' || dragAtual.slot !== i || dragAtual.de === k) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    el.classList.add('drop-alvo');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drop-alvo'));
+  el.addEventListener('drop', e => {
+    if (!dragAtual || dragAtual.tipo !== 'move' || dragAtual.slot !== i) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const de = dragAtual.de;
+    dragAtual = null;
+    if (de === k) return;
+    const s = comp[i];
+    [s.moves[de], s.moves[k]] = [s.moves[k], s.moves[de]];
+    renderComp();
+  });
+}
+
 function buildEmptySlot(i) {
   const d = document.createElement('div');
   d.className = 'comp-slot comp-slot-empty';
   d.innerHTML = '<span style="font-size:24px;line-height:1">+</span><span>Adicionar Pokémon</span>';
   d.onclick = () => openPokemonPicker(i);
+  ligarDragDePokemon(d, i, false);   // vazio recebe, mas não se arrasta
   return d;
 }
 
 function buildFilledSlot(slot, i) {
   const d = document.createElement('div');
   d.className = 'comp-slot filled';
+  d.title = 'Arraste para reordenar';
   if (compFormat === '2v2') d.classList.add(slot.active ? 'active' : 'benched');
+  ligarDragDePokemon(d, i, true);
 
   // Com mega ativa, o card passa a mostrar a forma mega (sprite, nome e tipos).
   const view = slot.mega || slot;
@@ -3689,9 +3781,18 @@ function buildFilledSlot(slot, i) {
   d.appendChild(meta);
 
   // Com mega ativa a passiva é imposta pela forma, então o campo fica travado.
-  d.appendChild(compField(slot.mega ? 'Passiva 🔒' : 'Passiva',
-                          slot.mega ? fmt(slot.mega.ability) : (slot.ability ? fmt(slot.ability.name) : 'escolher'),
-                          !slot.mega && !slot.ability, () => { if (!slot.mega) openAbilityPicker(i); }));
+  const abilityName = slot.mega ? slot.mega.ability : slot.ability?.name;
+  const abilityField = compField(slot.mega ? 'Passiva 🔒' : 'Passiva',
+                          abilityName ? fmt(abilityName) : 'escolher',
+                          !slot.mega && !slot.ability, () => { if (!slot.mega) openAbilityPicker(i); });
+  if (abilityName) {
+    attachInfoTip(abilityField, async () => {
+      const desc = await descricaoDePassiva(abilityName);
+      return `<div class="it-head"><span class="it-name">✨ ${fmt(abilityName)}</span></div>
+              <p class="it-desc">${desc}</p>`;
+    });
+  }
+  d.appendChild(abilityField);
   const itemField = compField('Item', slot.item ? itemLabel(slot.item.name) : 'escolher', !slot.item,
                               () => openItemPicker(i), slot.item ? itemIconHtml(slot.item.name, 16) : '');
   if (slot.item) {
@@ -3722,7 +3823,9 @@ function buildFilledSlot(slot, i) {
   const mv = document.createElement('div');
   mv.className = 'comp-moves';
   for (let k = 0; k < 4; k++) {
-    mv.appendChild(buildMoveRow(slot.moves[k], () => openMovePicker(i, k), slot));
+    const row = buildMoveRow(slot.moves[k], () => openMovePicker(i, k), slot);
+    ligarDragDeGolpe(row, i, k, !!slot.moves[k]);   // vazio recebe, mas não se arrasta
+    mv.appendChild(row);
   }
   d.appendChild(mv);
 
@@ -4141,7 +4244,9 @@ function renderPokemonPickerList() {
     card.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png" loading="lazy"/>
       <span class="ppc-name">${fmt(allNames[id])}</span>
       ${types.map(t => `<span class="tpill" style="background:${TC[t]||'#888'}">${TPT[t]||t}</span>`).join('')}`;
-    card.onclick = () => choosePokemon(pickerState.slotIdx, id);
+    // Igual ao draft: hover mostra os stats, clique abre a ficha com botão de confirmar.
+    attachTip(card, id);
+    card.onclick = () => openDraftDetail(id, 'comp', {name: allNames[id], slotIdx: pickerState.slotIdx});
     grid.appendChild(card);
   });
   list.innerHTML = '';
@@ -4278,6 +4383,16 @@ const toItemName = s => {
   return /^[a-z]+ium-z$/.test(n) ? n + '--held' : n;
 };
 // Rede de segurança: se o nome puro não existir, tenta com o sufixo.
+// Descrição da passiva pro tooltip; guarda em cache pra não bater na API a cada hover.
+const passivaDescCache = {};
+async function descricaoDePassiva(name) {
+  if (!passivaDescCache[name]) {
+    try { passivaDescCache[name] = describeEntry(await api('https://pokeapi.co/api/v2/ability/' + name)); }
+    catch (e) { return 'Sem descrição.'; }
+  }
+  return passivaDescCache[name];
+}
+
 async function fetchItem(name) {
   try { return await api('https://pokeapi.co/api/v2/item/' + name); }
   catch (e) {
